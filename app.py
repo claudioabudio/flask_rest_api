@@ -1,26 +1,18 @@
 from flask import Flask, jsonify, request, Response
 import json
+import jwt
+import datetime
+import traceback
 from BookModel import *
 from settings import *
 # app = Flask(__name__)
 print(__name__)
 
-# this was just for prototyping without using a database !
-# books = [
-# {
-#     'name' : 'Gren eggs and ham',
-#     'price' : 7.99,
-#     'isbn' : 978039400165
-# },
-# {
-#    'name' : 'The cat in the hat',
-#     'price' : 6.99,
-#     'isbn' : 9782371000193
-
-# }
-
-# ]
-
+@app.route("/login")
+def get_token():
+    expiration_date = datetime.datetime.utcnow() + datetime.timedelta(minutes=60)
+    token = jwt.encode({'exp': expiration_date}, app.config['SECRET_KEY'], algorithm=app.config['ALG'])
+    return token
 
 def validBookObject(book):
     if ('price' in book and 'isbn' in book and 'name' in book):
@@ -30,6 +22,17 @@ def validBookObject(book):
 
 @app.route('/books')
 def get_books():
+    token = request.args.get('token')
+    print('Token passed: ', token)
+    try:
+        jwt.decode(token, app.config['SECRET_KEY'], algorithms=app.config['ALG'])
+    except:
+        # traceback.print_exc()
+        invalidTokenErrorMsg = {
+            "error" : "Need a valid token to view this page",
+            "helpString" : "figure it out !"
+        }
+        return Response(json.dumps(invalidTokenErrorMsg), 401, mimetype='application/json')
     return jsonify({'books' : Book.get_books()})
 
 @app.route('/books', methods=['POST'])
